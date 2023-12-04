@@ -1,12 +1,11 @@
 from selenium import webdriver
 from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
-
 
 from dotenv import load_dotenv
 from datetime import datetime
@@ -21,11 +20,20 @@ load_dotenv()
 
 class AutoOrder(webdriver.Chrome):
   
-  def __init__(self, address: str='新小岩', id:str='0', date:int=None, time:str=13, timeout=10):
+  def __init__(
+    self,
+    address: str='sample_1',
+    id:str='0',
+    date:int=None,
+    time:str=13,
+    timeout=10,
+    headless=True
+  ):
     self.base_url = os.environ.get('RTE_URL')
     self.id = id
     self.address_name = address
     self.current_date = datetime.now().day
+    self.headless = headless
     if date is None:
       self.date = self.current_date
     else:
@@ -34,8 +42,12 @@ class AutoOrder(webdriver.Chrome):
     
     driver_path = os.environ.get('DRIVER_PASS')
     service = Service(executable_path=resource_path(driver_path))
-    
-    super().__init__(service=service)
+    options  = Options()
+    options.add_argument('--blink-settings=imagesEnabled=false')
+    if self.headless:
+      options.add_argument('--headless')
+
+    super().__init__(service=service, options=options)
     self.implicitly_wait(timeout)
 
   def access(self):
@@ -108,8 +120,9 @@ class AutoOrder(webdriver.Chrome):
             delivery_start_button.click()
           except:
             print('デリバリー選択を再試行します')
-        
-    while True:
+    
+    count = 0    
+    while count < 10:
       diff_date = self.date - self.current_date
       if diff_date > 2 :
         try:
@@ -128,7 +141,10 @@ class AutoOrder(webdriver.Chrome):
         self.execute_script("arguments[0].click();", time_button)
         break
       except:
-        print('時間選択に失敗しています。確認してください')
+        count += 1
+        print(f'時間選択に失敗しました:{count}')
+        if count == 10:
+          print('時間選択に10回失敗しました。ルートを追加してください')
   
   def payment(self):
     while True:
@@ -169,22 +185,26 @@ class AutoOrder(webdriver.Chrome):
             random.choice(add_buttons).click()
           except:
             print(e)
-    
-    try:
-      age_confirm_box = self.find_element(By.CSS_SELECTOR, 'input[data-test="summary-age-confirmation-checkbox"]')
-      age_confirm_box.click()
-    except:
-      print('年齢確認省略')
-    place_order_button = self.find_element(By.CSS_SELECTOR, 'button[data-synthetics="place-order-button"]')
-    place_order_button.click()
-    
+        
     while True:
       is_finished = self.is_finished_order()
       if is_finished:
-        self.quit()
+        # self.quit()
+        print('決済処理に成功しました。次の注文に進みます')
         break
       else:
         print('注文終了を確認できていないので修了処理を開始します')
+
+      try:
+        age_confirm_box = self.find_element(By.CSS_SELECTOR, 'input[data-test="summary-age-confirmation-checkbox"]')
+        age_confirm_box.click()
+      except:
+        print('年齢確認省略')
+      try:      
+        place_order_button = self.find_element(By.CSS_SELECTOR, 'button[data-synthetics="place-order-button"]')
+        place_order_button.click()
+      except:
+        print('既に決済画面に移動しています')
 
       try:        
         checkout_frame = self.find_element(By.CSS_SELECTOR, 'iframe[data-test="3ds-iframe"]')
@@ -199,7 +219,6 @@ class AutoOrder(webdriver.Chrome):
         self.switch_to.default_content()
         print('switch to default')
         
-      
   def is_not_found(self):
     try:
       _ = self.find_element(By.XPATH, "//span[text()='ページが見つかりません。']")
@@ -223,3 +242,6 @@ class AutoOrder(webdriver.Chrome):
         return current_price
       except Exception as e :
         print(e)
+        
+  def set_address(self, address: str):
+    self.address_name = address
