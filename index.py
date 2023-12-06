@@ -5,18 +5,32 @@ from modules.csv_writer import csv_writer
 if __name__ == '__main__':
   
   order_numbers = [
-    43, 49
+    '392',
+    '398',
+    '406',
+    '409',
+    '410',
+    '412',
+    '413',
+    '419',
+    '423',
+    '425',
+    '426',
+    '429',
+    '430',
+    '431',
+    '432',
   ] # 変える
   
-  id = '2' # 変える
+  id = '1' # 変える
   
-  ref_file_name = './data/LA_2023-12-01_type3_test_order.xlsx'
+  ref_file_name = './data/2023-12-04_type3_test_order.xlsx'
   
   auto_order = AutoOrder(
     # address='sample_4',
     id=id, 
-    date=4, # チェックする
-    time=21, # チェックする
+    date=6, # チェックする
+    time=15, # チェックする
     timeout=1,
     headless=True
   )
